@@ -239,10 +239,39 @@ proof
     done by iff.refl [R : Rel]
 qed
 
+The following result can be proved using the different relation definitions as well as the definition of the domain and range.
+
 theorem rel.is_rel_on [R : term] :
     |- R : Rel ↔ ∃A, ∃B, R ∈ Rel(A, B)
 proof
-    todo
+    -- (→)
+    assume R : Rel then ∃A, ∃B, R ∈ Rel(A, B) as
+        follows R ∈ Rel(dom(R), ran(R)) by rel.def;
+        done logically;
+    -- (←)
+    assume ∃A, ∃B, R ∈ Rel(A, B) then R : Rel as
+        -- We can fix A and B with our assumption
+        obtain A st ∃B, R ∈ Rel(A, B) logically;
+        obtain B st R ∈ Rel(A, B) logically;
+        follows R ⊆ A × B by rel_on.def;
+        suffices R ∈ Rel(dom(R), ran(R)) by rel.def;
+        suffices R ⊆ dom(R) × ran(R) by rel_on.def;
+        suffices ∀x, x ∈ R → x ∈ dom(R) × ran(R) by sub.def;
+        arbitrary x;
+        assume x ∈ R then x ∈ dom(R) × ran(R) as
+            follows ∀y, y ∈ R → y ∈ A × B by sub.def given R ⊆ A × B;
+            follows x ∈ A × B logically;
+            -- As x is an ordered pair in A × B, we know specifically that there is an a and b which make up the ordered pair x
+            obtain a st a ∈ A and b st b ∈ B ∧ x = ⟨a, b⟩ by cart_prod.def;
+            -- TODO: This (2 next lines) should not be something we have to prove
+            follows π₁(x) = a by opair_first.def given x = ⟨a, b⟩;
+            follows π₂(x) = b by opair_second.def given x = ⟨a, b⟩;
+            -- The first and second coordinates of x are by definition in the domain and range of R
+            thus π₁(x) ∈ dom(R) by dom.def given x ∈ R;
+            thus π₂(x) ∈ ran(R) by ran.def given x ∈ R;
+            done by cart_prod.def;
+        ;
+    done logically
 qed
 
 theorem rel_on.is_rel [R A B : term] :
@@ -334,6 +363,7 @@ proof
     suffices {⟨x, f(x)⟩ | x ∈ A} ∈ {f ∈ Rel(A, B) | ∀a, a ∈ A → (∃!b, ⟨a, b⟩ ∈ f)};
     todo
 qed
+
 
 TODO:
 
