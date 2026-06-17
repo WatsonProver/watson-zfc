@@ -491,6 +491,18 @@ proof
     done by fn_on.pairs [f] [dom(f)] [ran(f)]
 qed
 
+A useful lemma which lets us skip a lot of notation
+
+lemma fn.apply_iff [f a b : term] : (f : Fn) (a ∈ dom(f))
+    |- ⟨a, b⟩ ∈ f ↔ f(a) = b
+proof
+    follows f ∈ (dom(f) → ran(f)) by fn.def;
+    follows ∀a ∈ dom(f), ∃!b, ⟨a, b⟩ ∈ f by fn_on.def;
+    follows ∃!b, ⟨a, b⟩ ∈ f logically;
+    follows ⟨a, f(a)⟩ ∈ f by iota.unique [⟨a, _⟩ ∈ f];
+    done logically
+qed
+
 
 notation function_maps_to
     term ::= x:@binding(term) " ∈ " term " ↦ " term(x)
@@ -619,6 +631,8 @@ qed
 
 ## Function properties & Composition
 
+The image of a function under a set is the set resulting from applying the function to every element of the set
+
 notation image_set
     term (1000) ::= term "[" term "]"
 end
@@ -635,6 +649,8 @@ proof
     done logically
 qed
 
+Importantly, every image has a preimage, which we'll have as the set of terms which are mapped to a specific set under a function
+
 notation preimage_set
     term (1000) ::= term "⁻¹" "[" term "]"
 end
@@ -650,6 +666,8 @@ proof
     done by zfc.extensionality
 qed
 
+A surjection, also known as an onto function, between sets is a mapping where the range is the same as the codomain
+
 notation surjection
     term ::= term " ↠ " term
 end
@@ -664,6 +682,8 @@ proof
     suffices ∀f, f ∈ {f ∈ (A → B) | ran(f) = B} ↔ (f ∈ (A → B) ∧ ran(f) = B);
     done by zfc.extensionality
 qed
+
+An injection, a one-to-one function, between sets is one where every element of the domain is mapped to a unique element in the range
 
 notation injection
     term ::= term " ↣ " term
@@ -690,6 +710,8 @@ proof
     done by iff.refl [f : Inj]
 qed
 
+A bijection between sets is a function that is both injective and surjective
+
 notation bijection
     term ::= term " ↔ " term
 end
@@ -713,4 +735,225 @@ theorem bij.def [f : term] :
     |- f : Bij ↔ f ∈ (dom(f) ↔ ran(f))
 proof
     done by iff.refl [f : Bij]
+qed
+
+This theorem follows cleanly from the definitions for injective, bijective, and surjective functions
+
+theorem bij_on.is_inj_and_surj [f A B : term] :
+    |- f ∈ (A ↔ B) ↔ (f ∈ (A ↣ B) ∧ f ∈ (A ↠ B))
+proof
+    follows f ∈ (A ↔ B) ↔ (f ∈ (A ↣ B) ∧ ran(f) = B) by bij_on.def;
+    follows f ∈ (A ↠ B) ↔ (f ∈ (A → B) ∧ ran(f) = B) by surj_on.def;
+    follows f ∈ (A ↣ B) → f ∈ (A → B) by inj_on.def;
+    done logically
+qed
+
+We can define an inverse relation simply as the swapped coordinates of the relation
+
+notation inverse_relation
+    term (1000) ::= term "⁻¹"
+end
+
+definition
+    f:term⁻¹ := {⟨π₂(p), π₁(p)⟩ | p ∈ f}
+end
+
+Swapping the components of every pair in f swaps the roles of the domain and the range.
+
+lemma inv.dom [f : term] :
+    |- dom(f⁻¹) = ran(f)
+proof
+    follows ∀x, x ∈ dom(f⁻¹) ↔ ∃y ∈ f⁻¹, x = π₁(y) by dom.def;
+    thus ∀y, y ∈ f⁻¹ ↔ ∃p ∈ f, y = ⟨π₂(p), π₁(p)⟩ by set_map.def [⟨π₂(_), π₁(_)⟩] [f];
+    follows ∀p, π₁(⟨π₂(p), π₁(p)⟩) = π₂(p) by opair_first.def;
+    follows ∀x, x ∈ ran(f) ↔ ∃p ∈ f, x = π₂(p) by ran.def;
+    hence ∀x, x ∈ dom(f⁻¹) ↔ x ∈ ran(f) logically;
+    done by zfc.extensionality
+qed
+
+lemma inv.ran [f : term] :
+    |- ran(f⁻¹) = dom(f)
+proof
+    follows ∀x, x ∈ ran(f⁻¹) ↔ ∃y ∈ f⁻¹, x = π₂(y) by ran.def;
+    thus ∀y, y ∈ f⁻¹ ↔ ∃p ∈ f, y = ⟨π₂(p), π₁(p)⟩ by set_map.def [⟨π₂(_), π₁(_)⟩] [f];
+    follows ∀p, π₂(⟨π₂(p), π₁(p)⟩) = π₁(p) by opair_second.def;
+    follows ∀x, x ∈ dom(f) ↔ ∃p ∈ f, x = π₁(p) by dom.def;
+    hence ∀x, x ∈ ran(f⁻¹) ↔ x ∈ dom(f) logically;
+    done by zfc.extensionality
+qed
+
+The following proof gives us a way to reason with and construct what f⁻¹ looks like
+
+lemma inv.mem [f A B : term] : (f ∈ Rel(A, B))
+    |- ∀a, ∀b, ⟨a, b⟩ ∈ f⁻¹ ↔ ⟨b, a⟩ ∈ f
+proof
+    arbitrary a; arbitrary b;
+    follows f ⊆ A × B by rel_on.def;
+    thus ∀y, y ∈ f⁻¹ ↔ ∃p ∈ f, y = ⟨π₂(p), π₁(p)⟩ by set_map.def [⟨π₂(_), π₁(_)⟩] [f];
+    assume ⟨b, a⟩ ∈ f then ⟨a, b⟩ ∈ f⁻¹ as
+        follows π₁(⟨b, a⟩) = b by opair_first.def;
+        follows π₂(⟨b, a⟩) = a by opair_second.def;
+        hence ⟨a, b⟩ = ⟨π₂(⟨b, a⟩), π₁(⟨b, a⟩)⟩ logically;
+        done logically
+        ;
+    assume ⟨a, b⟩ ∈ f⁻¹ then ⟨b, a⟩ ∈ f as
+        obtain p st p ∈ f ∧ ⟨a, b⟩ = ⟨π₂(p), π₁(p)⟩ logically;
+        follows p ∈ A × B by sub.def given f ⊆ A × B;
+        obtain c st c ∈ A and d st d ∈ B ∧ p = ⟨c, d⟩ by cart_prod.def;
+        follows π₁(p) = c by opair_first.def given p = ⟨c, d⟩;
+        follows π₂(p) = d by opair_second.def given p = ⟨c, d⟩;
+        follows a = d ∧ b = c by opair.eq given ⟨a, b⟩ = ⟨π₂(p), π₁(p)⟩;
+        done logically
+        ;
+    done logically
+qed
+
+The inverse of a relation between A and B is itself a relation, between B and A.
+
+lemma inv.rel [f A B : term] : (f ∈ Rel(A, B))
+    |- f⁻¹ ∈ Rel(B, A)
+proof
+    -- A relation is just some subset of the cartesian product
+    follows f ⊆ A × B by rel_on.def;
+    follows ∀a, ∀b, ⟨a, b⟩ ∈ f⁻¹ ↔ ⟨b, a⟩ ∈ f by inv.mem;
+    suffices ∀y, y ∈ f⁻¹ → y ∈ B × A by rel_on.def, sub.def;
+    arbitrary y;
+    assume y ∈ f⁻¹ then y ∈ B × A as
+        -- every element of f⁻¹ is a swapped pair from f
+        thus ∀z, z ∈ f⁻¹ ↔ ∃p ∈ f, z = ⟨π₂(p), π₁(p)⟩ by set_map.def [⟨π₂(_), π₁(_)⟩] [f];
+        obtain p st p ∈ f ∧ y = ⟨π₂(p), π₁(p)⟩ logically;
+        -- inv.mem swaps the pair back into f
+        follows ⟨π₁(p), π₂(p)⟩ ∈ f logically;
+        follows ⟨π₁(p), π₂(p)⟩ ∈ A × B by sub.def given f ⊆ A × B;
+        hence π₁(p) ∈ A ∧ π₂(p) ∈ B by cart_prod.def, opair.eq;
+        done by cart_prod.def
+        ;
+    done logically
+qed
+
+notation function_composition
+    term (400) ::= term " ∘ " term
+end
+
+definition
+    g ∘ f := {⟨x, g(f(x))⟩ | x ∈ {x ∈ dom(f) | f(x) ∈ dom(g)}}
+end
+
+theorem composition.def [f g : term] :
+    |- ∀y, y ∈ (g ∘ f) ↔ ∃x, (x ∈ dom(f) ∧ f(x) ∈ dom(g)) ∧ y = ⟨x, g(f(x))⟩
+proof
+    follows ∀y, y ∈ (g ∘ f) ↔ ∃x ∈ {x ∈ dom(f) | f(x) ∈ dom(g)}, y = ⟨x, g(f(x))⟩
+        by set_map.def [⟨_, g(f(_))⟩] [{x ∈ dom(f) | f(x) ∈ dom(g)}];
+    hence ∀x, x ∈ {x ∈ dom(f) | f(x) ∈ dom(g)} ↔ (x ∈ dom(f) ∧ f(x) ∈ dom(g))
+        by comp.def [f(_) ∈ dom(g)] [dom(f)];
+    done logically
+qed
+
+theorem composition.dom [f g : term] :
+    |- ∀x, x ∈ dom(g ∘ f) ↔ (x ∈ dom(f) ∧ f(x) ∈ dom(g))
+proof
+    follows ∀z, z ∈ dom(g ∘ f) ↔ ∃y ∈ (g ∘ f), z = π₁(y) by dom.def;
+    furthermore ∀y, y ∈ (g ∘ f) ↔ ∃x, (x ∈ dom(f) ∧ f(x) ∈ dom(g)) ∧ y = ⟨x, g(f(x))⟩ by composition.def;
+    indeed ∀x, π₁(⟨x, g(f(x))⟩) = x by opair_first.def;
+    done logically
+qed
+
+theorem composition.is_fn [f g : term] : (f : Fn) (g : Fn)
+    |- g ∘ f : Fn
+proof
+    -- We just want to show that g ∘ f is some functional relation
+    suffices ∃A, ∃B, g ∘ f ∈ (A → B) by fn.is_fn_on;
+    thus ∀x ∈ {x ∈ dom(f) | f(x) ∈ dom(g)}, g(f(x)) ∈ ran(g) as
+        -- The construction here is simple as we only pick x where f(x) is in dom(g), because
+        -- g(dom(g)) being in ran(g) falls out of the definition
+        arbitrary c st c ∈ {x ∈ dom(f) | f(x) ∈ dom(g)};
+        follows g(f(c)) ∈ ran(g) as
+            follows ∀x, x ∈ {x ∈ dom(f) | f(x) ∈ dom(g)} ↔ (x ∈ dom(f) ∧ f(x) ∈ dom(g))
+                by comp.def [f(_) ∈ dom(g)] [dom(f)];
+            thus f(c) ∈ dom(g) logically;
+            hence ⟨f(c), g(f(c))⟩ ∈ g ↔ g(f(c)) = g(f(c)) by fn.apply_iff [g] [f(c)] [g(f(c))];
+            hence ⟨f(c), g(f(c))⟩ ∈ g logically;
+            follows π₂(⟨f(c), g(f(c))⟩) = g(f(c)) by opair_second.def;
+            done by ran.def given ⟨f(c), g(f(c))⟩ ∈ g
+            ;
+        done logically
+        ;
+    -- g ∘ f is a functional mapping from dom(g ∘ f) to ran(g)
+    follows g ∘ f ∈ ({x ∈ dom(f) | f(x) ∈ dom(g)} → ran(g))
+        by fun_map.is.rel [{x ∈ dom(f) | f(x) ∈ dom(g)}] [ran(g)] [g(f(_))];
+    done logically
+qed
+
+This theorem follows cleanly from the above facts. 
+
+theorem composition.apply [f g a : term] : (f : Fn) (g : Fn) (a ∈ dom(g ∘ f))
+    |- (g ∘ f)(a) = g(f(a))
+proof
+    hence a ∈ dom(f) ∧ f(a) ∈ dom(g) by composition.dom;
+    furthermore ∀y, y ∈ (g ∘ f) ↔ ∃x, (x ∈ dom(f) ∧ f(x) ∈ dom(g)) ∧ y = ⟨x, g(f(x))⟩ by composition.def;
+    furthermore ⟨a, g(f(a))⟩ ∈ (g ∘ f) logically;
+    indeed g ∘ f : Fn by composition.is_fn;
+    furthermore ⟨a, g(f(a))⟩ ∈ (g ∘ f) ↔ (g ∘ f)(a) = g(f(a)) by fn.apply_iff [g ∘ f] [a] [g(f(a))];
+    done logically
+qed
+
+theorem composition.is_fn_on [f g A B C : term] : (f ∈ (A → B)) (g ∈ (B → C))
+    |- g ∘ f ∈ (A → C)
+proof
+    hence g ∘ f : Fn by composition.is_fn, fn.is_fn_on;
+    hence ∀x, x ∈ dom(g ∘ f) ↔ (x ∈ dom(f) ∧ f(x) ∈ dom(g)) by composition.dom;
+    follows f ∈ (A → B) → dom(f) = A ∧ ran(f) ⊆ B by fn_on.is_fn;
+    follows g ∈ (B → C) → dom(g) = B ∧ ran(g) ⊆ C by fn_on.is_fn;
+    indeed ∀x, x ∈ dom(g ∘ f) ↔ (x ∈ A ∧ f(x) ∈ B) logically;
+    hence ∀x, x ∈ A → f(x) ∈ B as
+        arbitrary c st c ∈ A;
+        follows f(c) ∈ B as
+            indeed c ∈ dom(f) logically;
+            follows ⟨c, f(c)⟩ ∈ f as
+                indeed f : Fn by fn.is_fn_on;
+                follows ⟨c, f(c)⟩ ∈ f ↔ f(c) = f(c) by fn.apply_iff [f] [c] [f(c)];
+                done logically
+                ;
+            follows f(c) ∈ ran(f) by opair_second.def, ran.def given ⟨c, f(c)⟩ ∈ f;
+            done by sub.def given ran(f) ⊆ B
+            ;
+        ;
+    hence ∀x, x ∈ dom(g ∘ f) ↔ x ∈ A logically;
+    hence dom(g ∘ f) = A by zfc.extensionality;
+    thus ran(g ∘ f) ⊆ C as
+        suffices ∀y, y ∈ ran(g ∘ f) → y ∈ C by sub.def;
+        arbitrary y;
+        assume y ∈ ran(g ∘ f) then y ∈ C as
+            obtain p st p ∈ (g ∘ f) ∧ y = π₂(p) by ran.def;
+            obtain x st (x ∈ dom(f) ∧ f(x) ∈ dom(g)) ∧ p = ⟨x, g(f(x))⟩ by composition.def;
+            indeed g : Fn by fn.is_fn_on;
+            furthermore f(x) ∈ dom(g) logically;
+            follows ⟨f(x), g(f(x))⟩ ∈ g ↔ g(f(x)) = g(f(x)) by fn.apply_iff [g] [f(x)] [g(f(x))];
+            hence ⟨f(x), g(f(x))⟩ ∈ g logically;
+            follows g(f(x)) ∈ ran(g) by ran.def, opair_second.def given ⟨f(x), g(f(x))⟩ ∈ g;
+            done by opair_second.def, sub.def given ran(g) ⊆ C
+            ;
+        done logically
+        ;
+    done by fn_on.is_fn
+qed
+
+theorem comp_inj.is_inj [f g A B C : term] : (f ∈ (A ↣ B)) (g ∈ (B ↣ C))
+    |- g ∘ f ∈ (A ↣ C)
+proof
+    todo
+qed
+
+theorem shroeder_bernstein [A B : term] : (∃f, f ∈ (A ↣ B)) (∃g, g ∈ (B ↣ A))
+    |- ∃h, h ∈ (A ↔ B)
+proof
+    todo
+qed
+
+One of the most important properties of a bijective function is that it defines a unique bijective inverse
+
+theorem bij.has_inverse [f A B : term] : (f ∈ (A ↔ B))
+    |- f⁻¹ ∈ (B ↔ A)
+proof
+    todo
 qed

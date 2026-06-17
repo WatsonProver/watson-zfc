@@ -469,6 +469,15 @@ tactic tactic.hence
     tactic ::= @kw"hence" goal:@fact just:justification ";" next:tactic
 end
 
+tactic tactic.furthermore
+    tactic ::= @kw"furthermore" goal:@fact just:justification ";" next:tactic
+end
+
+tactic tactic.indeed
+    tactic ::= @kw"indeed" goal:@fact just:justification ";" next:tactic
+end
+
+
 We are now ready to prove that or is commutative.
 
 theorem or.comm [p q : sentence] : (p ∨ q)
