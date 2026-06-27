@@ -3,17 +3,8 @@ name: Build and Deploy Book
 on:
   push:
     branches:
-      - main
+      - prod
   workflow_dispatch:
-
-permissions:
-  contents: read
-  pages: write
-  id-token: write
-
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
 
 jobs:
   build:
@@ -30,7 +21,7 @@ jobs:
       - name: Get Watson repository commit hash
         id: watson-version
         run: |
-          WATSON_COMMIT=$(git ls-remote https://github.com/Dragon-Hatcher/watson.git HEAD | awk '{print $1}')
+          WATSON_COMMIT=$(git ls-remote https://github.com/WatsonProver/watson.git HEAD | awk '{print $1}')
           echo "commit=$WATSON_COMMIT" >> $GITHUB_OUTPUT
 
       - name: Cache Watson binary
@@ -45,7 +36,7 @@ jobs:
         env:
           RUSTFLAGS: ""
         run: |
-          git clone https://github.com/Dragon-Hatcher/watson.git watson-repo
+          git clone https://github.com/WatsonProver/watson.git watson-repo
           cd watson-repo/watson
           cargo install --path .
 
@@ -53,20 +44,11 @@ jobs:
         run: watson check
 
       - name: Build book
-        run: watson book --base-path "/watson-zfc/"
+        run: watson book --base-path "/"
 
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+      - name: Deploy to Cloudflare Pages
+        uses: cloudflare/wrangler-action@v3
         with:
-          path: ./build/book
-
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v4
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy ./build/book --project-name=watson-zfc --branch=prod
