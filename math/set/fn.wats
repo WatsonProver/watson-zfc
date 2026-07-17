@@ -649,6 +649,42 @@ proof
     done logically
 qed
 
+Trivially, the image of a subset of a domain is a subset of the range, with equality when finding the image of the domain
+
+theorem dom.is_ran_under_image [f A B : term] : (f ∈ (A → B))
+    |- f[A] = ran(f)
+proof
+    thus f : Fn by fn_on.is_fn;
+    suffices f[dom(f)] = ran(f) by fn_on.is_fn;
+    hence ∀y, y ∈ f[dom(f)] ↔ ∃a ∈ dom(f), y = f(a) by image.def;
+    furthermore ∀y, y ∈ ran(f) ↔ ∃z ∈ f, y = π₂(z) by ran.def;
+    indeed ∀y, y ∈ f[dom(f)] ↔ y ∈ ran(f) as
+        arbitrary y;
+        assume y ∈ f[dom(f)] then y ∈ ran(f) as
+            obtain a st a ∈ dom(f) ∧ y = f(a) logically;
+            hence ⟨a, f(a)⟩ ∈ f ↔ f(a) = f(a) by fn.apply_iff given a ∈ dom(f);
+            follows π₂(⟨a, f(a)⟩) = f(a) by opair_second.def;
+            done by ran.def given ⟨a, f(a)⟩ ∈ f
+            ;
+        assume y ∈ ran(f) then y ∈ f[dom(f)] as
+            follows f ⊆ A × B by rel_on.def, fn.in_rel, sub.def;
+            obtain b st b ∈ f ∧ y = π₂(b) logically;
+            hence b ∈ A × B by sub.def;
+            obtain a st a ∈ A and c st c ∈ B ∧ b = ⟨a, c⟩ by cart_prod.def;
+            furthermore π₂(b) = c by opair_second.def given b = ⟨a, c⟩;
+            thus a = π₁(⟨a, c⟩) by opair_first.def;
+            thus ⟨a, c⟩ ∈ f given b = ⟨a, c⟩;
+            hence a ∈ dom(f) by dom.def given ⟨a, c⟩ ∈ f;
+            follows ⟨a, c⟩ ∈ f ↔ f(a) = c by fn.apply_iff [f] [a] [c];
+            follows f(a) = y logically;
+            done by image.def given a ∈ dom(f)
+            ;
+        done logically
+        ;
+    done by zfc.extensionality
+qed
+
+
 Importantly, every image has a preimage, which we'll have as the set of terms which are mapped to a specific set under a function
 
 notation preimage_set
@@ -830,6 +866,45 @@ proof
         ;
 qed
 
+When f is a bijection, its inverse is a function, every b ∈ B has a
+preimage because f is onto, and that preimage is unique because f is injective.
+
+lemma inv.is_fn_on [f A B : term] : (f ∈ (A ↔ B))
+    |- f⁻¹ ∈ (B → A)
+proof
+    indeed f ∈ (A ↣ B) ∧ ran(f) = B by bij_on.def;
+    hence f ∈ (A → B) ∧ f : Fn ∧ dom(f) = A by inj_on.def, fn_on.is_fn;
+    furthermore ∀a, ∀b, a ∈ A ∧ b ∈ A ∧ f(a) = f(b) → a = b by inj_on.def;
+    furthermore f ∈ Rel(A, B) by fn.in_rel, sub.def;
+    follows f⁻¹ ∈ Rel(B, A) by inv.rel given f ∈ Rel(A, B);
+    thus ∀a, ∀b, ⟨a, b⟩ ∈ f⁻¹ ↔ ⟨b, a⟩ ∈ f by inv.mem given f ∈ Rel(A, B);
+    suffices ∀b ∈ B, ∃!a, ⟨b, a⟩ ∈ f⁻¹ by fn_on.def;
+    arbitrary d;
+    assume d ∈ B then ∃!a, ⟨d, a⟩ ∈ f⁻¹ as
+        -- Every element of B is in the image of f[A] so a exists
+        obtain a₀ st a₀ ∈ A ∧ d = f(a₀) by image.def, dom.is_ran_under_image;
+        hence ⟨a₀, d⟩ ∈ f ∧ ⟨d, a₀⟩ ∈ f⁻¹ by fn.apply_iff given a₀ ∈ A;
+        -- any preimage of d is exactly a because f is injective
+        hence ∀a, ⟨d, a⟩ ∈ f⁻¹ → a ∈ dom(f) ∧ f(a) = d by dom.def, opair_first.def, fn.apply_iff;
+        done logically
+        ;
+    done logically
+qed
+
+Next we show that bijections undo their inverse
+
+lemma inv.apply [f A B b : term] : (f ∈ (A ↔ B)) (b ∈ B)
+    |- f(f⁻¹(b)) = b
+proof
+    indeed f ∈ (A → B) ∧ f : Fn ∧ dom(f) = A by bij_on.def, inj_on.def, fn_on.is_fn;
+    furthermore f ∈ Rel(A, B) by fn.in_rel, sub.def;
+    hence ∀u, ∀v, ⟨u, v⟩ ∈ f⁻¹ ↔ ⟨v, u⟩ ∈ f by inv.mem;
+    follows f⁻¹ : Fn ∧ dom(f⁻¹) = B by inv.is_fn_on, fn_on.is_fn;
+    hence ⟨b, f⁻¹(b)⟩ ∈ f⁻¹ ∧ ⟨f⁻¹(b), b⟩ ∈ f by fn.apply_iff given b ∈ B;
+    follows f⁻¹(b) ∈ dom(f) by dom.def, opair_first.def given ⟨f⁻¹(b), b⟩ ∈ f;
+    done by fn.apply_iff given ⟨f⁻¹(b), b⟩ ∈ f and f⁻¹(b) ∈ dom(f)
+qed
+
 notation function_composition
     term (400) ::= term " ∘ " term
 end
@@ -857,10 +932,12 @@ proof
     done logically
 qed
 
+Here we show that function composition is itself a function
+
 theorem composition.is_fn [f g : term] : (f : Fn) (g : Fn)
     |- g ∘ f : Fn
 proof
-    -- We just want to show that g ∘ f is some functional relation
+    -- We want to show that the composition is some functional relation between two sets
     suffices ∃A, ∃B, g ∘ f ∈ (A → B) by fn.is_fn_on;
     thus ∀x ∈ {x ∈ dom(f) | f(x) ∈ dom(g)}, g(f(x)) ∈ ran(g) as
         -- The construction here is simple as we only pick x where f(x) is in dom(g), because
@@ -908,9 +985,9 @@ proof
         arbitrary c st c ∈ A;
         follows f(c) ∈ B as
             indeed c ∈ dom(f) logically;
-            follows ⟨c, f(c)⟩ ∈ f as
+            hence ⟨c, f(c)⟩ ∈ f as
                 indeed f : Fn by fn.is_fn_on;
-                follows ⟨c, f(c)⟩ ∈ f ↔ f(c) = f(c) by fn.apply_iff [f] [c] [f(c)];
+                thus ⟨c, f(c)⟩ ∈ f ↔ f(c) = f(c) by fn.apply_iff [f] [c] [f(c)];
                 done logically
                 ;
             follows f(c) ∈ ran(f) by opair_second.def, ran.def given ⟨c, f(c)⟩ ∈ f;
@@ -937,22 +1014,120 @@ proof
     done by fn_on.is_fn
 qed
 
+A function composed of two injective functions is itself injective. This is a standard injectivity proof
+where we reason that g(f(x)) = g(f(y)) implies f(x) = f(y) which impliex x = y
+
 theorem comp_inj.is_inj [f g A B C : term] : (f ∈ (A ↣ B)) (g ∈ (B ↣ C))
     |- g ∘ f ∈ (A ↣ C)
 proof
+    follows g ∘ f ∈ (A → C) by composition.is_fn_on, inj_on.def;
+    suffices ∀x, ∀y, x ∈ A ∧ y ∈ A ∧ (g ∘ f)(x) = (g ∘ f)(y) → x = y by inj_on.def;
+    arbitrary x; arbitrary y;
+    assume x ∈ A ∧ y ∈ A ∧ (g ∘ f)(x) = (g ∘ f)(y) then x = y as
+        follows f ∈ (A → B) ∧ g ∈ (B → C) by inj_on.def;
+        indeed (∀a, ∀b, a ∈ A ∧ b ∈ A ∧ f(a) = f(b) → a = b)
+              ∧ (∀a, ∀b, a ∈ B ∧ b ∈ B ∧ g(a) = g(b) → a = b) by inj_on.def;
+        indeed f : Fn ∧ g : Fn by fn.is_fn_on;
+        thus dom(g ∘ f) = A ∧ dom(g) = B by fn_on.is_fn;
+        hence x ∈ dom(g ∘ f) ∧ y ∈ dom(g ∘ f) logically;
+        follows g(f(x)) = g(f(y)) by composition.apply;
+        furthermore f(x) ∈ B ∧ f(y) ∈ B by composition.dom;
+        thus f(x) = f(y) logically;
+        done logically
+        ;
+    done logically
+qed
+
+The following proof where we show composition of surjective functions is surjective takes a different
+shape. We want to show that some c in ran(g) has a preimage in dom(g) and then that dom(g) = ran(f).
+
+theorem comp_surj.is_surj [f g A B C : term] : (f ∈ (A ↠ B)) (g ∈ (B ↠ C))
+    |- g ∘ f ∈ (A ↠ C)
+proof
+    follows g ∘ f ∈ (A → C) by composition.is_fn_on, surj_on.def;
+    suffices ran(g ∘ f) = C by surj_on.def;
+    follows f ∈ (A → B) ∧ ran(f) = B ∧ g ∈ (B → C) ∧ ran(g) = C by surj_on.def;
+    hence f : Fn ∧ g : Fn by fn_on.is_fn;
+    thus dom(f) = A ∧ dom(g) = B ∧ ran(g ∘ f) ⊆ C by fn_on.is_fn;
+    thus f[A] = ran(f) ∧ g[B] = ran(g) ∧ (g ∘ f)[A] = ran(g ∘ f) by dom.is_ran_under_image;
+    furthermore ∀y, y ∈ f[A] ↔ ∃z ∈ A, y = f(z) by image.def;
+    follows ∀y, y ∈ g[B] ↔ ∃z ∈ B, y = g(z) by image.def;
+    suffices C ⊆ ran(g ∘ f) by sub.sub_eq;
+    suffices ∀c, c ∈ C → c ∈ ran(g ∘ f) by sub.def;
+    arbitrary c;
+    assume c ∈ C then c ∈ ran(g ∘ f) as
+        obtain b st b ∈ B ∧ c = g(b) logically;
+        obtain a st a ∈ A ∧ b = f(a) logically;
+        thus a ∈ dom(g ∘ f) by composition.dom;
+        follows (g ∘ f)(a) = c by composition.apply;
+        done by image.def given a ∈ A
+        ;
+    done logically
+qed
+
+This lemma looks a bit weird, but the idea is that we want to be able to reason about where in B f has an inverse
+
+lemma inj.is_bij_to_ran [f A B : term] : (f ∈ (A ↣ B))
+    |- f ∈ (A ↔ ran(f))
+proof
+    suffices f ∈ (A ↣ ran(f)) by bij_on.def;
+    suffices (f ∈ (A → ran(f))) ∧ (∀x, ∀y, x ∈ A ∧ y ∈ A ∧ f(x) = f(y) → x = y) by inj_on.def;
+    hence f : Fn ∧ dom(f) = A by fn_on.is_fn, inj_on.def;
+    follows ran(f) ⊆ ran(f) by sub.refl;
+    indeed f ∈ (A → ran(f)) by fn_on.is_fn;
+    done by inj_on.def
+qed
+
+lemma sub.has_surj [S B : term]: (S ⊆ B) (S ≠ ∅)
+    |- ∃h, h ∈ (B ↠ S)
+proof
     todo
+qed
+
+One of the most important properties of a bijective function is that it defines a unique bijective 
+inverse. The proof follows cleanly from the previous inverse theorems.
+
+theorem bij.has_inverse [f A B : term] : (f ∈ (A ↔ B))
+    |- f⁻¹ ∈ (B ↔ A)
+proof
+    follows f⁻¹ ∈ (B → A) by inv.is_fn_on;
+    follows dom(f) = A by bij_on.def, inj_on.def, fn_on.is_fn;
+    follows ran(f⁻¹) = A by inv.ran given dom(f) = A;
+    thus ∀x, ∀y, x ∈ B ∧ y ∈ B ∧ f⁻¹(x) = f⁻¹(y) → x = y as
+        arbitrary x; arbitrary y;
+        assume x ∈ B ∧ y ∈ B ∧ f⁻¹(x) = f⁻¹(y) then x = y as
+            follows f(f⁻¹(x)) = x ∧ f(f⁻¹(y)) = y by inv.apply;
+            done logically
+            ;
+        done logically
+        ;
+    follows f⁻¹ ∈ (B ↣ A) by inj_on.def;
+    done by bij_on.def
+qed
+
+Here we have that an injection between sets implies the existence of a surjection the other way. 
+We'll use this lemma later to explicitly construct this surjection. This lemma follows from the previous few where we show
+a surjection from B to ran(f) via sub.has_surj and ran(f) to A via bij.has_inverse as inj.is_bij_to_ran gives us a bijection between A and ran(f)
+
+lemma inj.is_inv_srj [f g A B : term] : (f ∈ (A ↣ B)) (A ≠ ∅)
+    |- ∃g, g ∈ (B ↠ A)
+proof
+    follows f ∈ (A → B) by inj_on.def;
+    hence f[A] = ran(f) by dom.is_ran_under_image;
+    suffices ∃h, ∃w, h ∈ (B ↠ ran(f)) ∧ w ∈ (ran(f) ↠ A) by comp_surj.is_surj;
+    hence ∃w, w ∈ (ran(f) ↠ A) as
+        follows f ∈ (A ↔ ran(f)) by inj.is_bij_to_ran;
+        furthermore ∃w₀, w₀ ∈ (ran(f) ↔ A) by bij.has_inverse;
+        done by bij_on.is_inj_and_surj
+        ;
+    furthermore ran(f) ⊆ B by fn_on.is_fn;
+    follows ran(f) ≠ ∅ by image.def, nonempty.has_element;
+    hence ∃h, h ∈ (B ↠ ran(f)) by sub.has_surj;
+    done by comp_surj.is_surj
 qed
 
 theorem shroeder_bernstein [A B : term] : (∃f, f ∈ (A ↣ B)) (∃g, g ∈ (B ↣ A))
     |- ∃h, h ∈ (A ↔ B)
-proof
-    todo
-qed
-
-One of the most important properties of a bijective function is that it defines a unique bijective inverse
-
-theorem bij.has_inverse [f A B : term] : (f ∈ (A ↔ B))
-    |- f⁻¹ ∈ (B ↔ A)
 proof
     todo
 qed
