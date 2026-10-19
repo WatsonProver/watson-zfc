@@ -563,6 +563,24 @@ proof
 qed
 
 
+lemma fun_map.apply [A B a : term] [e(_) : term(term)] : (∀x ∈ A, e(x) ∈ B) (a ∈ A)
+    |- (x ∈ A ↦ e(x))(a) = e(a)
+proof
+    follows x ∈ A ↦ e(x) ∈ (A → B) by fun_map.is.rel [A] [B] [e(_)];
+    follows x ∈ A ↦ e(x) : Fn by fn_on.is_fn;
+    follows dom(x ∈ A ↦ e(x)) = A by fn_on.is_fn;
+    follows a ∈ dom(x ∈ A ↦ e(x)) logically;
+    follows ∀y, y ∈ {⟨x, e(x)⟩ | x ∈ A} ↔ (∃x, x ∈ A ∧ y = ⟨x, e(x)⟩)
+        by set_map.def [⟨_, e(_)⟩] [A];
+    follows ⟨a, e(a)⟩ ∈ {⟨x, e(x)⟩ | x ∈ A} ↔ (∃x, x ∈ A ∧ ⟨a, e(a)⟩ = ⟨x, e(x)⟩)
+        specializing ∀y, y ∈ {⟨x, e(x)⟩ | x ∈ A} ↔ (∃x, x ∈ A ∧ y = ⟨x, e(x)⟩);
+    follows ⟨a, e(a)⟩ ∈ {⟨x, e(x)⟩ | x ∈ A} logically;
+    follows ⟨a, e(a)⟩ ∈ (x ∈ A ↦ e(x)) logically;
+    follows ⟨a, e(a)⟩ ∈ (x ∈ A ↦ e(x)) ↔ (x ∈ A ↦ e(x))(a) = e(a)
+        by fn.apply_iff [x ∈ A ↦ e(x)] [a] [e(a)];
+    done logically
+qed
+
 TODO:
 
 grammar_category chain_list
@@ -684,6 +702,28 @@ proof
     done by zfc.extensionality
 qed
 
+
+lemma image.mono [f X Y : term] : (X ⊆ Y)
+    |- f[X] ⊆ f[Y]
+proof
+    suffices ∀y, y ∈ f[X] → y ∈ f[Y] by sub.def;
+    arbitrary y;
+    assume y ∈ f[X] then y ∈ f[Y] as
+        obtain a st a ∈ X ∧ y = f(a) by image.def;
+        follows a ∈ Y by sub.def;
+        done by image.def
+        ;
+    done logically
+qed
+
+lemma fn_on.apply_in [f A B a : term] : (f ∈ (A → B)) (a ∈ A)
+    |- f(a) ∈ B
+proof
+    follows f[A] = ran(f) by dom.is_ran_under_image;
+    follows ran(f) ⊆ B by fn_on.is_fn;
+    follows f(a) ∈ f[A] by image.def;
+    done by sub.def
+qed
 
 Importantly, every image has a preimage, which we'll have as the set of terms which are mapped to a specific set under a function
 
@@ -1105,6 +1145,51 @@ proof
     done by bij_on.def
 qed
 
+lemma fun_map.is_inj [A B : term] [u(_) : term(term)] :
+    (∀x ∈ A, u(x) ∈ B)
+    (∀a, ∀b, a ∈ A ∧ b ∈ A ∧ u(a) = u(b) → a = b)
+    |- (x ∈ A ↦ u(x)) ∈ (A ↣ B)
+proof
+    todo
+qed
+
+lemma fun_map.ran [A B : term] [u(_) : term(term)] : (∀x ∈ A, u(x) ∈ B)
+    |- ran(x ∈ A ↦ u(x)) = {u(x) | x ∈ A}
+proof
+    todo
+qed
+
+
+lemma fun_map.inj_is_bij [A : term] [u(_) : term(term)] :
+    (∀x, ∀y, x ∈ A ∧ y ∈ A ∧ u(x) = u(y) → x = y)
+    |- (x ∈ A ↦ u(x)) ∈ (A ↔ {u(x) | x ∈ A})
+proof
+    hence ∀y, y ∈ {u(x) | x ∈ A} ↔ (∃x, x ∈ A ∧ y = u(x)) by set_map.def [u(_)] [A];
+    follows ∀a, a ∈ A → u(a) ∈ {u(x) | x ∈ A} as
+    arbitrary a;
+    assume a ∈ A then u(a) ∈ {u(x) | x ∈ A} as
+        follows a ∈ A ∧ u(a) = u(a) logically;
+        follows ∃x, x ∈ A ∧ u(a) = u(x) using a;
+        indeed u(a) ∈ {u(x) | x ∈ A} ↔ (∃x, x ∈ A ∧ u(a) = u(x))
+            specializing ∀y, y ∈ {u(x) | x ∈ A} ↔ (∃x, x ∈ A ∧ y = u(x));
+        done logically
+        ;
+    done logically
+    ;
+
+    hence (x ∈ A ↦ u(x)) ∈ (A → {u(x) | x ∈ A})
+        by fun_map.is.rel [A] [{u(x) | x ∈ A}] [u(_)];
+    hence (x ∈ A ↦ u(x)) : Fn by fn_on.is_fn;
+    indeed dom(x ∈ A ↦ u(x)) = A by fn_on.is_fn;
+qed
+
+theorem fn.glue [h₁ h₂ A₁ A₂ B₁ B₂ : term] : (h₁ ∈ (A₁ ↔ B₁)) (h₂ ∈ (A₂ ↔ B₂))
+    (A₁ ∩ A₂ = ∅) (B₁ ∩ B₂ = ∅)
+    |- h₁ ∪ h₂ ∈ (A₁ ∪ A₂ ↔ B₁ ∪ B₂)
+proof
+    todo
+qed
+
 Here we have that an injection between sets implies the existence of a surjection the other way. 
 We'll use this lemma later to explicitly construct this surjection. This lemma follows from the previous few where we show
 a surjection from B to ran(f) via sub.has_surj and ran(f) to A via bij.has_inverse as inj.is_bij_to_ran gives us a bijection between A and ran(f)
@@ -1129,5 +1214,89 @@ qed
 theorem shroeder_bernstein [A B : term] : (∃f, f ∈ (A ↣ B)) (∃g, g ∈ (B ↣ A))
     |- ∃h, h ∈ (A ↔ B)
 proof
+    obtain f st f ∈ (A ↣ B) and g st g ∈ (B ↣ A) logically;
+    -- φ(X) = A - g[B - f[X]] is monotone in X.
+    hence ∀X, ∀Y, X ⊆ Y → A - g[B - f[X]] ⊆ A - g[B - f[Y]] as
+        arbitrary X; arbitrary Y;
+        assume X ⊆ Y then A - g[B - f[X]] ⊆ A - g[B - f[Y]] as
+            thus f[X] ⊆ f[Y] by image.mono;
+            furthermore B - f[Y] ⊆ B - f[X] by set_diff.anti;
+            hence g[B - f[Y]] ⊆ g[B - f[X]] by image.mono;
+            done by set_diff.anti
+            ;
+        done logically
+        ;
+    -- every post-fixed point of φ is contained in C, since it witnesses its own
+    -- members' membership in C.
+    hence ∀X, A - g[B - f[X]] ⊆ A by set_diff.sub;
+    indeed ∃C, C ⊆ A ∧ C = A - g[B - f[C]]
+        by tarski_fixed_point [A] [A - g[B - f[_]]];
+    obtain C st C ⊆ A ∧ C = A - g[B - f[C]] logically;
+    follows g ∈ (B → A) by inj_on.def;
+    hence dom(g) = B by fn_on.is_fn;
+    thus g[B] = ran(g) by dom.is_ran_under_image;
+    hence ran(g) ⊆ A by fn_on.is_fn;
+    hence B - f[C] ⊆ B by set_diff.sub;
+    furthermore g[B - f[C]] ⊆ g[B] by image.mono;
+    thus g[B - f[C]] ⊆ A by sub.trans;
+    follows A - C = g[B - f[C]] by set_diff.double;
+    indeed g ∈ (B ↔ ran(g)) by inj.is_bij_to_ran;
+    hence g⁻¹ ∈ (ran(g) → B) as
+        thus g⁻¹ ∈ (ran(g) ↔ B) by bij.has_inverse;
+        done by bij_on.def, inj_on.def
+        ;
+    follows g[B - f[C]] ⊆ ran(g) logically;
+    hence f ∈ (A → B) by inj_on.def;
+    indeed ∀x, x ∈ A → (if x ∈ C then f(x) else g⁻¹(x)) ∈ B as
+        arbitrary x;
+        assume x ∈ A then (if x ∈ C then f(x) else g⁻¹(x)) ∈ B as
+            follows x ∈ C ∨ x ∉ C logically;
+            cases:
+            | x ∈ C then
+                follows (if x ∈ C then f(x) else g⁻¹(x)) = f(x)
+                    by if.true [x ∈ C] [f(x)] [g⁻¹(x)];
+                hence f(x) ∈ B by fn_on.apply_in;
+                done logically
+            | x ∉ C then
+                follows (if x ∈ C then f(x) else g⁻¹(x)) = g⁻¹(x)
+                    by if.false [x ∈ C] [f(x)] [g⁻¹(x)];
+                furthermore x ∈ A - C by set_diff.def;
+                hence x ∈ g[B - f[C]] logically;
+                indeed x ∈ ran(g) by sub.def;
+                hence g⁻¹(x) ∈ B by fn_on.apply_in;
+                done logically
+            ;
+        ;
+    let h := x ∈ A ↦ if x ∈ C then f(x) else g⁻¹(x);
+    thus h ∈ (A → B) by fun_map.is.rel [A] [B] [if _ ∈ C then f(_) else g⁻¹(_)];
+    indeed ∀x, x ∈ C → h(x) = f(x) as
+        arbitrary x;
+        assume x ∈ C then h(x) = f(x) as
+            follows x ∈ A by sub.def;
+            follows h(x) = (if x ∈ C then f(x) else g⁻¹(x))
+                by fun_map.apply [A] [B] [x] [if _ ∈ C then f(_) else g⁻¹(_)];
+            indeed (if x ∈ C then f(x) else g⁻¹(x)) = f(x)
+                by if.true [x ∈ C] [f(x)] [g⁻¹(x)];
+            done logically
+            ;
+        done logically
+        ;
+    indeed ∀x, x ∈ A - C → h(x) = g⁻¹(x) as
+        arbitrary x;
+        assume x ∈ A - C then h(x) = g⁻¹(x) as
+            follows x ∈ A by set_diff.def;
+            hence x ∉ C by set_diff.def;
+            follows h(x) = (if x ∈ C then f(x) else g⁻¹(x))
+                by fun_map.apply [A] [B] [x] [if _ ∈ C then f(_) else g⁻¹(_)];
+            indeed (if x ∈ C then f(x) else g⁻¹(x)) = g⁻¹(x)
+                by if.false [x ∈ C] [f(x)] [g⁻¹(x)];
+            done logically
+            ;
+        done logically
+        ;
+    follows ∀x, x ∈ C → f(x) ∈ f[C] as todo;
+    hence ∀y, y ∈ A - C → g⁻¹(y) ∉ f[C] as
+        todo
+        ;
     todo
 qed

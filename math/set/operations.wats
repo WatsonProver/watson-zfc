@@ -757,6 +757,45 @@ proof
     done logically
 qed
 
+theorem set_diff.anti [a X Y : term] : (X ⊆ Y)
+    |- a - Y ⊆ a - X
+proof
+    suffices ∀x, x ∈ a - Y → x ∈ a - X by sub.def;
+    done by set_diff.def, sub.def
+qed
+
+theorem set_diff.double [a S : term] : (S ⊆ a)
+    |- a - (a - S) = S
+proof
+    follows ∀x, x ∈ a - (a - S) ↔ (x ∈ a ∧ x ∉ a - S) by set_diff.def;
+    follows ∀x, x ∈ a - S ↔ (x ∈ a ∧ x ∉ S) by set_diff.def;
+    follows ∀x, x ∈ a - (a - S) ↔ x ∈ S by sub.def;
+    done by zfc.extensionality
+qed
+
+theorem set_diff.union [a S : term] : (S ⊆ a)
+    |- S ∪ (a - S) = a
+proof
+    hence ∀x, x ∈ S ∪ (a - S) ↔ x ∈ S ∨ x ∈ a - S by union.def;
+    follows ∀x, x ∈ a - S ↔ (x ∈ a ∧ x ∉ S) by set_diff.def;
+    thus ∀x, x ∈ S ∨ x ∈ a - S ↔ (x ∈ S ∨ (x ∈ a ∧ x ∉ S)) logically;
+    furthermore ∀x, (x ∈ S ∨ (x ∈ a ∧ x ∉ S)) ↔ ((x ∈ S ∨ x ∈ a) ∧ (x ∈ S ∨ x ∉ S)) logically;
+    hence ∀x, ((x ∈ S ∨ x ∈ a) ∧ (x ∈ S ∨ x ∉ S)) ↔ x ∈ S ∨ x ∈ a logically;
+    indeed ∀x, x ∈ S ∨ x ∈ a ↔ x ∈ a by sub.def given S ⊆ a;
+    done by zfc.extensionality
+qed
+
+theorem set_diff.disjoint [a S : term] :
+    |- S ∩ (a - S) = ∅
+proof
+    follows ∀x, x ∈ S ∩ (a - S) ↔ x ∈ S ∧ x ∈ (a - S) by inter.def;
+    follows ∀x, x ∈ a - S ↔ (x ∈ a ∧ x ∉ S) by set_diff.def;
+    hence ∀x, x ∈ S ∧ x ∈ a - S ↔ (x ∈ S ∧ x ∈ a ∧ x ∉ S) logically;
+    furthermore ∀x, (x ∈ S ∧ x ∈ a ∧ x ∉ S) ↔ ⊥ logically;
+    follows ∀x, x ∉ S ∩ (a - S) logically;
+    done by zfc.extensionality, empty.def
+qed
+
 ### The Powerset
 
 We will define the powerset as the set of all subsets of a set. 
@@ -810,7 +849,9 @@ end
 theorem union.empty [a : term] :
     |- a ∪ ∅ = a
 proof
-    todo
+    hence ∀x, x ∈ a ∪ ∅ ↔ (x ∈ a ∨ x ∈ ∅) by union.def;
+    thus ∀x, x ∉ ∅ by empty.def;
+    done by zfc.extensionality
 qed
 
 theorem empty.union [a : term] :
@@ -852,4 +893,46 @@ proof
         follows if  p then a else b = b by if.false [p] [a] [b];
         follows if ¬p then b else a = b by if.true [¬p] [b] [a];
         done logically
+qed
+
+theorem tarski_fixed_point [A : term] [p(_) : term(term)] :
+    (∀X, ∀Y, X ⊆ Y → p(X) ⊆ p(Y)) (∀X, p(X) ⊆ A)
+    |- ∃C, C ⊆ A ∧ C = p(C)
+proof
+    let C := {a ∈ A | ∃X ∈ 𝒫(A), X ⊆ p(X) ∧ a ∈ X};
+    follows ∀a, a ∈ C ↔ (a ∈ A ∧ ∃X ∈ 𝒫(A), X ⊆ p(X) ∧ a ∈ X) 
+        by comp.def [∃X ∈ 𝒫(A), X ⊆ p(X) ∧ _ ∈ X] [A];
+    -- every post-fixed point of φ is contained in C, since it witnesses its own
+    -- members' membership in C.
+    thus ∀X, X ∈ 𝒫(A) ∧ X ⊆ p(X) → X ⊆ C as
+        arbitrary X;
+        assume X ∈ 𝒫(A) ∧ X ⊆ p(X) then X ⊆ C as
+            suffices ∀a, a ∈ X → a ∈ C by sub.def;
+            arbitrary a;
+            assume a ∈ X then a ∈ C as
+                indeed X ⊆ A by powset.def;
+                follows a ∈ A by sub.def;
+                done logically
+                ;
+            done logically
+            ;
+        done logically
+        ;
+    -- C ⊆ φ(C): each a ∈ C sits in some post-fixed point X ⊆ C, and φ is monotone.
+    follows C ⊆ p(C) as
+        suffices ∀a, a ∈ C → a ∈ p(C) by sub.def;
+        arbitrary a;
+        assume a ∈ C then a ∈ p(C) as
+            obtain X st X ∈ 𝒫(A) ∧ X ⊆ p(X) ∧ a ∈ X logically;
+            follows X ⊆ C logically;
+            hence p(X) ⊆ p(C) logically;
+            done by sub.def
+            ;
+        done logically
+        ;
+    hence C ⊆ A by sub.trans;
+    indeed p(C) ⊆ A logically;
+    furthermore p(C) ∈ 𝒫(A) by powset.def;
+    thus p(C) ⊆ C logically;
+    done by sub.sub_eq
 qed

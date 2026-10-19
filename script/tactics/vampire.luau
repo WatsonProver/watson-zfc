@@ -150,18 +150,35 @@ function termToV(term: Frag, bindings: ConversionCtx): VTerm?
     end
 
     -- If we didn't manage to convert all the children, e.g. if some of the
-    -- children are sentences, then we just convert the whole term to a constant
-    -- for Vampire.
+    -- children are sentences, then we treat the whole term as opaque.
+    -- TODO: we still need to be checking for template vars.
     if children == nil then
-        -- TODO: if the term is unclosed or has template vars we need to make
-        -- this a function and not a constant. For now we just return nil if
-        -- unclosed. But we also need to be checking for template vars.
-        if term.unclosedCount ~= 0 then
-            return nil
+        -- A closed opaque term is just a constant.
+        if term.unclosedCount == 0 then
+            local constant = termCacheGet(term, 0)
+            return constant:with({})
         end
 
-        local constant = termCacheGet(term, 0)
-        return constant:with({})
+        -- An unclosed opaque term mentions variables bound outside it, e.g.
+        -- `if x ∈ C then f(x) else g(x)` under a `∀x`. Abstracting it to a
+        -- constant would be unsound, since distinct x give distinct values, so
+        -- instead we abstract it as an uninterpreted function of the free
+        -- variables currently in scope. Vampire then knows nothing about the
+        -- term other than that it is a function of those variables, which is
+        -- weak but sound, and crucially it lets the surrounding formula convert
+        -- at all rather than failing outright.
+        --
+        -- Variables are addressed relative to the top of the stack, matching
+        -- the `varIdx` case above: index 0 is the innermost binding.
+        local args = {}
+        for varIdx = 0, term.unclosedCount - 1 do
+            local vVar = bindings.bindingsStack[#bindings.bindingsStack - varIdx]
+            if vVar == nil then return nil end
+            table.insert(args, VTerm:newVar(vVar))
+        end
+
+        local fn = termCacheGet(term, term.unclosedCount)
+        return fn:with(args)
     end
 
     -- Now we can make a new function symbol
@@ -285,9 +302,14 @@ function predToV(pred: Frag, bindings: ConversionCtx): VFormula?
     end
 
     if pred.formal.templateIdx ~= nil then
-        -- Convert all the children into terms
+        -- Convert all the children into terms. We iterate the presentation
+        -- children rather than `pred.formal.children` so that notation like
+        -- `succ(n)` is still visible: termToV can only abstract a fully
+        -- unfolded term (e.g. the raw iota expression succ reduces to) when it
+        -- is closed, so stripping the notation loses arguments that mention
+        -- bound variables.
         local children = {}
-        for i, child in pred.formal.children do
+        for i, child in pred.children do
             local vChild = termToV(child, bindings)
             if vChild == nil then return nil end
             children[i] = vChild
