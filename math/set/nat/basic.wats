@@ -1,0 +1,105 @@
+notation zero
+    term ::= "0"
+end
+
+@[reducible]
+definition
+    0 := ∅
+end
+
+notation one
+    term ::= "1"
+end
+
+@[reducible]
+definition
+    1 := succ(0)
+end
+
+notation two
+    term ::= "2"
+end
+
+@[reducible]
+definition
+    2 := succ(1)
+end
+
+theorem nat.one.eq :
+    |- 1 = {∅}
+proof
+    follows succ(∅) = ∅ ∪ {∅} by ordinal.succ.def;
+    follows ∀x, x ∈ ∅ ∪ {∅} ↔ x ∈ {∅} by union.def, empty.def;
+    done by zfc.extensionality
+qed
+
+theorem nat.two.eq :
+    |- 2 = {∅, {∅}}
+proof
+    hence succ(1) = 1 ∪ {1} by ordinal.succ.def;
+    follows succ(1) = {0} ∪ {1} by nat.one.eq;
+    hence ∀x, x ∈ {0} ∪ {1} ↔ (x ∈ {0} ∨ x ∈ {1}) by union.def;
+    furthermore ∀x, (x ∈ {0} ∨ x ∈ {1}) ↔ (x = 0 ∨ x = 1) by singleton.def;
+    furthermore ∀x, (x = 0 ∨ x = 1) ↔ x ∈ {0, 1} by pair.def;
+    done by zfc.extensionality, nat.one.eq
+qed
+
+corollary nat.zero.is :
+    |- 0 ∈ ω
+proof
+    done by omega.inductive, inductive.def
+qed
+
+corollary nat.succ.is [n : term] : (n ∈ ω)
+    |- succ(n) ∈ ω
+proof
+    done by omega.inductive, inductive.def
+qed
+
+theorem nat.succ.ne_zero [n : term] :
+    |- succ(n) ≠ 0
+proof
+    follows n ∈ succ(n) by ordinal.succ.def, union.def, singleton.def;
+    done by nonempty.has_element
+qed
+
+theorem nat.weak_induction [p(_) : sentence(term)] : (p(0)) (∀n ∈ ω, p(n) → p(succ(n)))
+    |- ∀n ∈ ω, p(n)
+proof
+    let T := {n ∈ ω | p(n)};
+    follows ∀y, y ∈ T ↔ (y ∈ ω ∧ p(y)) by comp.def [p(_)] [ω];
+    hence 0 ∈ T by nat.zero.is;
+    follows ∀n ∈ T, succ(n) ∈ T by nat.succ.is;
+    thus inductive(T) by inductive.def;
+    thus ω ⊆ T by omega.sub_inductive;
+    done by sub.def
+qed
+
+We prove the following important result by induction on the naturals.
+
+theorem nat.zero_or_succ [k : term] : (k ∈ ω)
+    |- k = 0 ∨ ∃m ∈ ω, k = succ(m)
+proof
+    -- Our base case
+    follows 0 = 0 ∨ (∃m ∈ ω, 0 = succ(m)) logically;
+    -- We show that our n + 1 case follows from our n case as n itself is the predecessor of n + 1
+    follows ∀n ∈ ω, (n = 0 ∨ (∃m ∈ ω, n = succ(m))) → (succ(n) = 0 ∨ (∃i ∈ ω, succ(n) = succ(i))) logically;
+    thus ∀n ∈ ω, n = 0 ∨ (∃m ∈ ω, n = succ(m))
+        by nat.weak_induction [_ = 0 ∨ ∃m ∈ ω, _ = succ(m)];
+    done logically
+qed
+
+lemma ordinal.succ.mem [n x : term] :
+    |- x ∈ succ(n) ↔ (x ∈ n ∨ x = n)
+proof
+    done by ordinal.succ.def, union.def, singleton.def
+qed
+
+theorem nat.succ.inj [n m : term] : (n ∈ ω) (m ∈ ω)
+    |- succ(n) = succ(m) → n = m
+proof
+    follows n ∈ succ(n) ∧ m ∈ succ(m) by ordinal.succ.def, union.def, singleton.def;
+    assume succ(n) = succ(m) then n = m as
+        follows (n ∈ m ∨ n = m) ∧ (m ∈ n ∨ m = n) by ordinal.succ.mem;
+        done by mem.no_loop;
+qed

@@ -563,6 +563,24 @@ proof
 qed
 
 
+lemma fun_map.apply [A B a : term] [e(_) : term(term)] : (∀x ∈ A, e(x) ∈ B) (a ∈ A)
+    |- (x ∈ A ↦ e(x))(a) = e(a)
+proof
+    follows x ∈ A ↦ e(x) ∈ (A → B) by fun_map.is.rel [A] [B] [e(_)];
+    follows x ∈ A ↦ e(x) : Fn by fn_on.is_fn;
+    follows dom(x ∈ A ↦ e(x)) = A by fn_on.is_fn;
+    follows a ∈ dom(x ∈ A ↦ e(x)) logically;
+    follows ∀y, y ∈ {⟨x, e(x)⟩ | x ∈ A} ↔ (∃x, x ∈ A ∧ y = ⟨x, e(x)⟩)
+        by set_map.def [⟨_, e(_)⟩] [A];
+    follows ⟨a, e(a)⟩ ∈ {⟨x, e(x)⟩ | x ∈ A} ↔ (∃x, x ∈ A ∧ ⟨a, e(a)⟩ = ⟨x, e(x)⟩)
+        specializing ∀y, y ∈ {⟨x, e(x)⟩ | x ∈ A} ↔ (∃x, x ∈ A ∧ y = ⟨x, e(x)⟩);
+    follows ⟨a, e(a)⟩ ∈ {⟨x, e(x)⟩ | x ∈ A} logically;
+    follows ⟨a, e(a)⟩ ∈ (x ∈ A ↦ e(x)) logically;
+    follows ⟨a, e(a)⟩ ∈ (x ∈ A ↦ e(x)) ↔ (x ∈ A ↦ e(x))(a) = e(a)
+        by fn.apply_iff [x ∈ A ↦ e(x)] [a] [e(a)];
+    done logically
+qed
+
 TODO:
 
 grammar_category chain_list
@@ -684,6 +702,28 @@ proof
     done by zfc.extensionality
 qed
 
+
+lemma image.mono [f X Y : term] : (X ⊆ Y)
+    |- f[X] ⊆ f[Y]
+proof
+    suffices ∀y, y ∈ f[X] → y ∈ f[Y] by sub.def;
+    arbitrary y;
+    assume y ∈ f[X] then y ∈ f[Y] as
+        obtain a st a ∈ X ∧ y = f(a) by image.def;
+        follows a ∈ Y by sub.def;
+        done by image.def
+        ;
+    done logically
+qed
+
+lemma fn_on.apply_in [f A B a : term] : (f ∈ (A → B)) (a ∈ A)
+    |- f(a) ∈ B
+proof
+    follows f[A] = ran(f) by dom.is_ran_under_image;
+    follows ran(f) ⊆ B by fn_on.is_fn;
+    follows f(a) ∈ f[A] by image.def;
+    done by sub.def
+qed
 
 Importantly, every image has a preimage, which we'll have as the set of terms which are mapped to a specific set under a function
 

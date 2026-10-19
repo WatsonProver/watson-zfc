@@ -285,9 +285,14 @@ function predToV(pred: Frag, bindings: ConversionCtx): VFormula?
     end
 
     if pred.formal.templateIdx ~= nil then
-        -- Convert all the children into terms
+        -- Convert all the children into terms. We iterate the presentation
+        -- children rather than `pred.formal.children` so that notation like
+        -- `succ(n)` is still visible: termToV can only abstract a fully
+        -- unfolded term (e.g. the raw iota expression succ reduces to) when it
+        -- is closed, so stripping the notation loses arguments that mention
+        -- bound variables.
         local children = {}
-        for i, child in pred.formal.children do
+        for i, child in pred.children do
             local vChild = termToV(child, bindings)
             if vChild == nil then return nil end
             children[i] = vChild

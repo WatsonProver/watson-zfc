@@ -249,7 +249,7 @@ qed
 Since $\omega$ is an ordinal induction holds inside of it. From this we get
 induction on the natural numbers!
 
-corollary omega.induction [p(_) : sentence(term)] : (∀n ∈ ω, (∀m ∈ n, p(m)) → p(n))
+corollary omega.strong_induction [p(_) : sentence(term)] : (∀n ∈ ω, (∀m ∈ n, p(m)) → p(n))
     |- ∀n ∈ ω, p(n)
 proof
     follows ω : Ord by ordinal.omega.is;

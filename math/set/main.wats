@@ -34,3 +34,6 @@ module set.fn
 
 ## The Ordinals
 module set.ordinal
+
+## The Natural Numbers
+module set.nat
